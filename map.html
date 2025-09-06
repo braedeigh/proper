@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Proper</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text&family=Merriweather&display=swap" rel="stylesheet">
+
+  <!-- NEW: Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root { --bg:#f8f9fb; --text:#333; --heading:#2c3e50; --muted:#6b7280; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Crimson Text', serif;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      padding: 60px 16px 40px;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    h1 { font-size: 2.4rem; color: var(--heading); margin: 0 0 1rem; text-align: center; }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      text-align: left;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+    .card p {
+      font-family: 'Merriweather', serif;
+      line-height: 1.6;
+      font-size: 1.05rem;
+      margin: 0 0 1.5em 0;
+    }
+    .card h1, .card h2 {
+      margin: 0 0 .5rem 0;
+      font-family: 'Crimson Text', serif;
+      color: var(--heading);
+    }
+    /* NEW: Map container */
+    #map {
+      width: 100%;
+      height: 420px;
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
+    }
+    /* NEW: small legend/chips */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0;
+      font-family: 'Merriweather', serif; font-size: .95rem; color: var(--muted);
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .35rem .6rem; border-radius: 999px; background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+    }
+    .btn {
+      display: inline-block; padding: .6rem .9rem; border-radius: 10px;
+      background: #0ea5e9; color: white; text-decoration: none; font-weight: 600;
+    }
+    .btn:hover { filter: brightness(0.95); }
+    .muted { color: var(--muted); font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Welcome to the Proper Consumer Map!</h1>
+
+    <div class="card">
+      <p>
+        Proper is a transparency-forward, crowdsourced consumer resource for everyday essentials. On the Proper Consumer Map, you will find items that I have deemed to be the "best" product for each category based on extensive research and community feedback. The criteria I judge each item off of are primarily supply chain transparency (priority) as well as sustainability and human health.
+      </p>
+      <p>
+        Here you will find my research on household items that I use in my daily life based on these criteria. My goal is to map the supply chains
+        of every item I use to high granularity, starting with clothing and hygiene products. Each product card links to a supply chain map or summary with known information, so you can see where items come from, what they are truly made of, and whether they’re the most healthful choice.
+      </p>
+      <p>
+        When a full map isn’t yet possible, I’ll share the best public information and rank options. I’m also drafting the tiered <em>Proper Standard</em>—a label for products with end-to-end transparent supply chains (minimum tier = contact info for all nodes).
+      </p>
+      <p>
+        My overarching goal is to calculate my way out of an extractive lifestyle so that all of my daily habits create a net regenerative lifestyle. If you’d like to collaborate or support, email <a href="mailto:bradie.lee33@gmail.com">bradie.lee33@gmail.com</a>.
+      </p>
+    </div>
+
+    <!-- NEW: Interactive Map Card -->
+    <div class="card">
+      <h2>Supply Chain Map (Example: TS Designs T-Shirt)</h2>
+      <p class="muted">Toggle layers in the map control. Click markers to see node details. Replace the demo data below with your real points.</p>
+      <div id="map"></div>
+      <div class="legend" id="legend">
+        <span class="chip"><span class="dot" style="background:#ef4444"></span> Farm</span>
+        <span class="chip"><span class="dot" style="background:#f59e0b"></span> Gin</span>
+        <span class="chip"><span class="dot" style="background:#10b981"></span> Spinner</span>
+        <span class="chip"><span class="dot" style="background:#3b82f6"></span> Knitter/Mill</span>
+        <span class="chip"><span class="dot" style="background:#8b5cf6"></span> Dye/Finish</span>
+        <span class="chip"><span class="dot" style="background:#111827"></span> Cut & Sew</span>
+      </div>
+    </div>
+
+    <!-- Your existing product card -->
+    <div class="card">
+      <img src="img/tshirt.jpg" alt="TS Designs T-Shirt" style="width:100%; border-radius:8px;">
+      <h2>TS Designs T-Shirt</h2>
+      <p>A U.S.-made organic cotton T-shirt from TS Designs.</p>
+      <a href="#map" class="btn">View Supply Chain →</a>
+    </div>
+  </div>
+
+  <!-- NEW: Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- NEW: Embed your supply chain data (edit this) -->
+  <script id="supplychain-data" type="application/json">
+  {
+    "product": "TS Designs T-Shirt (Demo Data)",
+    "nodes": [
+      {
+        "stage": "Farm",
+        "name": "Example Organic Cotton Farm",
+        "city": "Lubbock",
+        "region": "Texas, USA",
+        "lat": 33.5779,
+        "lng": -101.8552,
+        "contact": "info@examplefarm.org",
+        "links": [{ "label": "Website", "url": "https://examplefarm.org" }],
+        "notes": "Certified organic cotton. Replace with real farm."
+      },
+      {
+        "stage": "Gin",
+        "name": "Example Cotton Gin",
+        "city": "Lamesa",
+        "region": "Texas, USA",
+        "lat": 32.7376,
+        "lng": -101.9507,
+        "contact": "hello@examplegin.com",
+        "links": [],
+        "notes": "Ginning separates lint from seed."
+      },
+      {
+        "stage": "Spinner",
+        "name": "Example Spinning Mill",
+        "city": "Gaston County",
+        "region": "North Carolina, USA",
+        "lat": 35.2635,
+        "lng": -81.1873,
+        "contact": "contact@spinnermill.co",
+        "links": [],
+        "notes": "Spins fiber into yarn."
+      },
+      {
+        "stage": "Knitter/Mill",
+        "name": "Example Knitting Mill",
+        "city": "Greensboro",
+        "region": "North Carolina, USA",
+        "lat": 36.0726,
+        "lng": -79.7920,
+        "contact": "ops@knitmill.example",
+        "links": [],
+        "notes": "Knits yarn into fabric."
+      },
+      {
+        "stage": "Dye/Finish",
+        "name": "Example Dye House",
+        "city": "Raleigh",
+        "region": "North Carolina, USA",
+        "lat": 35.7796,
+        "lng": -78.6382,
+        "contact": "team@dyehouse.example",
+        "links": [],
+        "notes": "Dyeing/finishing processes."
+      },
+      {
+        "stage": "Cut & Sew",
+        "name": "TS Designs (Demo)",
+        "city": "Burlington",
+        "region": "North Carolina, USA",
+        "lat": 36.0957,
+        "lng": -79.4378,
+        "contact": "info@tsdesigns.com",
+        "links": [{ "label": "Company", "url": "https://tsdesigns.com" }],
+        "notes": "Cutting/sewing & finishing."
+      }
+    ]
+  }
+  </script>
+
+  <!-- NEW: Map logic -->
+  <script>
+    // Stage colors (match legend)
+    const stageColors = {
+      "Farm": "#ef4444",
+      "Gin": "#f59e0b",
+      "Spinner": "#10b981",
+      "Knitter/Mill": "#3b82f6",
+      "Dye/Finish": "#8b5cf6",
+      "Cut & Sew": "#111827"
+    };
+
+    // Helper: build popup HTML
+    function nodePopup(n, idx) {
+      const linkHtml = (n.links||[])
+        .map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`)
+        .join(" · ");
+      const contact = n.contact ? `<div><strong>Contact:</strong> ${n.contact}</div>` : "";
+      const notes = n.notes ? `<div style="margin-top:.25rem; color:#6b7280">${n.notes}</div>` : "";
+      return `
+        <div style="font-family:'Merriweather',serif; max-width:260px">
+          <div style="font-weight:700; font-size:1rem; margin-bottom:.25rem;">
+            ${idx+1}. ${n.stage}
+          </div>
+          <div style="font-weight:600">${n.name||""}</div>
+          <div>${[n.city, n.region].filter(Boolean).join(", ")}</div>
+          ${contact}
+          ${linkHtml ? `<div style="margin-top:.25rem">${linkHtml}</div>` : ""}
+          ${notes}
+        </div>
+      `;
+    }
+
+    // Parse data
+    const dataEl = document.getElementById('supplychain-data');
+    const chain = JSON.parse(dataEl.textContent);
+    const nodes = chain.nodes || [];
+
+    // Initialize map
+    const map = L.map('map', { scrollWheelZoom: true });
+    const base = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution: '&copy; OpenStreetMap contributors' }
+    ).addTo(map);
+
+    // Create a layer group per stage for toggling
+    const stageLayers = {};
+    Object.keys(stageColors).forEach(stage => {
+      stageLayers[stage] = L.layerGroup();
+    });
+
+    // Add markers
+    const latlngsInOrder = [];
+    nodes.forEach((n, idx) => {
+      if (typeof n.lat !== 'number' || typeof n.lng !== 'number') return;
+
+      const color = stageColors[n.stage] || '#111827';
+      // Simple circle marker so we don’t rely on external icon assets
+      const marker = L.circleMarker([n.lat, n.lng], {
+        radius: 7,
+        color: color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.85
+      }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
+
+      (stageLayers[n.stage] || map).addLayer(marker);
+      latlngsInOrder.push([n.lat, n.lng]);
+    });
+
+    // Add stage layers to map & layer control
+    const overlays = {};
+    Object.entries(stageLayers).forEach(([stage, layer]) => {
+      if (layer.getLayers().length) {
+        layer.addTo(map);
+        overlays[stage] = layer;
+      }
+    });
+    L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+
+    // Draw production path (order = array order)
+    if (latlngsInOrder.length >= 2) {
+      L.polyline(latlngsInOrder, { color: '#0ea5e9', weight: 3, opacity: 0.9 }).addTo(map);
+      map.fitBounds(L.latLngBounds(latlngsInOrder), { padding: [20, 20] });
+    } else if (latlngsInOrder.length === 1) {
+      map.setView(latlngsInOrder[0], 7);
+    } else {
+      map.setView([20,0], 2);
+    }
+
+    // Smooth scroll if user clicks "View Supply Chain →"
+    document.querySelectorAll('a[href="#map"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => map.invalidateSize(), 300);
+      });
+    });
+  </script>
+</body>
+</html>
