@@ -7,7 +7,7 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Text&family=Merriweather&display=swap" rel="stylesheet">
 
-  <!-- NEW: Leaflet CSS -->
+  <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -48,14 +48,14 @@
       font-family: 'Crimson Text', serif;
       color: var(--heading);
     }
-    /* NEW: Map container */
+    /* Map container */
     #map {
       width: 100%;
       height: 420px;
       border-radius: 12px;
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
     }
-    /* NEW: small legend/chips */
+    /* Legend */
     .legend {
       display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0;
       font-family: 'Merriweather', serif; font-size: .95rem; color: var(--muted);
@@ -105,7 +105,7 @@ However, I will also be providing best alternatives in cases where this is impos
       </p>
     </div>
 
-    <!-- NEW: Interactive Map Card -->
+    <!-- Interactive Map Card -->
     <div class="card">
       <h2>Supply Chain Map (Example: TS Designs T-Shirt)</h2>
       <p class="muted">Toggle layers in the map control. Click markers to see node details. Replace the demo data below with your real points.</p>
@@ -129,14 +129,16 @@ However, I will also be providing best alternatives in cases where this is impos
     </div>
   </div>
 
-  <!-- NEW: Leaflet JS -->
+  <!-- Leaflet JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
+  <!-- PolylineDecorator plugin (for arrows) -->
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.7.0/dist/leaflet.polylineDecorator.min.js"></script>
 
-  <!-- NEW: Embed your supply chain data (edit this) -->
+  <!-- Supply chain data -->
   <script id="supplychain-data" type="application/json">
   {
     "product": "TS Designs T-Shirt (Demo Data)",
@@ -211,10 +213,9 @@ However, I will also be providing best alternatives in cases where this is impos
   }
   </script>
 
-  <!-- NEW: Map logic -->
+  <!-- Map logic with arrows -->
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // Stage colors (match legend)
     const stageColors = {
       "Farm": "#ef4444",
       "Gin": "#f59e0b",
@@ -224,7 +225,6 @@ However, I will also be providing best alternatives in cases where this is impos
       "Cut & Sew": "#111827"
     };
 
-    // Helper: build popup HTML
     function nodePopup(n, idx) {
       const linkHtml = (n.links||[])
         .map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`)
@@ -247,30 +247,16 @@ However, I will also be providing best alternatives in cases where this is impos
 
     // Parse data safely
     const dataEl = document.getElementById('supplychain-data');
-    if (!dataEl) { console.error('❌ Missing #supplychain-data'); return; }
-
     let chain, nodes;
     try {
       chain = JSON.parse(dataEl.textContent || dataEl.innerText || 'null');
       nodes = Array.isArray(chain?.nodes) ? chain.nodes : [];
     } catch (e) {
-      console.error('❌ JSON parse error in #supplychain-data:', e);
+      console.error('JSON parse error in #supplychain-data:', e);
       return;
     }
 
-    console.log('✅ Parsed supply chain data:', chain);
-    console.log('✅ nodes length:', nodes.length, nodes);
-
-    // Ensure Leaflet is available
-    if (typeof L === 'undefined') {
-      console.error('❌ Leaflet not loaded before map logic.');
-      return;
-    }
-
-    // Build map
-    const mapEl = document.getElementById('map');
-    if (!mapEl) { console.error('❌ Missing #map'); return; }
-
+    if (typeof L === 'undefined') { console.error('Leaflet not loaded'); return; }
     const map = L.map('map', { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -278,53 +264,63 @@ However, I will also be providing best alternatives in cases where this is impos
 
     // Stage layers
     const stageLayers = {};
-    Object.keys(stageColors).forEach(stage => {
-      stageLayers[stage] = L.layerGroup();
-    });
+    Object.keys(stageColors).forEach(stage => stageLayers[stage] = L.layerGroup());
 
-    // Add markers (robust to string lat/lng)
+    // Markers
     const latlngsInOrder = [];
     nodes.forEach((n, idx) => {
       const lat = Number(n.lat);
       const lng = Number(n.lng);
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        console.warn(`⏭️ Skipping node ${idx+1} (${n.name||n.stage||"?"}) invalid lat/lng:`, n.lat, n.lng);
-        return;
-      }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
       const color = stageColors[n.stage] || '#111827';
       const marker = L.circleMarker([lat, lng], {
-        radius: 7,
-        color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.85
+        radius: 7, color, weight: 2, fillColor: color, fillOpacity: 0.85
       }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
 
       (stageLayers[n.stage] || map).addLayer(marker);
       latlngsInOrder.push([lat, lng]);
     });
 
-    console.log(`📍 Rendered ${latlngsInOrder.length} markers.`);
-
-    // Overlays & fit
+    // Overlays
     const overlays = {};
     Object.entries(stageLayers).forEach(([stage, layer]) => {
-      if (layer.getLayers().length) {
-        layer.addTo(map);
-        overlays[stage] = layer;
-      }
+      if (layer.getLayers().length) { layer.addTo(map); overlays[stage] = layer; }
     });
     L.control.layers(null, overlays, { collapsed: false }).addTo(map);
 
+    // Fit and draw route with ARROWS
     if (latlngsInOrder.length >= 2) {
-      map.fitBounds(L.latLngBounds(latlngsInOrder), { padding: [20, 20] });
-      L.polyline(latlngsInOrder, { color: '#0ea5e9', weight: 3, opacity: 0.9 }).addTo(map);
+      const bounds = L.latLngBounds(latlngsInOrder);
+      map.fitBounds(bounds, { padding: [20, 20] });
+
+      // Base route line
+      const route = L.polyline(latlngsInOrder, {
+        color: '#0ea5e9',
+        weight: 3,
+        opacity: 0.9
+      }).addTo(map);
+
+      // Arrowheads along the route
+      if (L.polylineDecorator) {
+        L.polylineDecorator(route, {
+          patterns: [
+            {
+              offset: '5%',
+              repeat: '20%',
+              symbol: L.Symbol.arrowHead({
+                pixelSize: 10,
+                pathOptions: { color: '#0ea5e9', fillOpacity: 1, weight: 0 }
+              })
+            }
+          ]
+        }).addTo(map);
+      } else {
+        console.warn('PolylineDecorator plugin not found—arrows disabled.');
+      }
     } else if (latlngsInOrder.length === 1) {
       map.setView(latlngsInOrder[0], 7);
     } else {
-      console.warn('⚠️ No valid coordinates found. Centering world.');
       map.setView([20, 0], 2);
     }
 
@@ -336,9 +332,6 @@ However, I will also be providing best alternatives in cases where this is impos
         setTimeout(() => map.invalidateSize(), 300);
       });
     });
-
-    // Debug helper
-    window._proper = { chain, nodes, latlngsInOrder };
   });
   </script>
 </body>
