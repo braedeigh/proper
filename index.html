@@ -1,60 +1,91 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>Proper</title>
+
+  <!-- Load the fonts you chose -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text&family=Merriweather&display=swap" rel="stylesheet">
+
   <style>
-    /* This is CSS */
+    :root { --bg:#f8f9fb; --text:#333; --heading:#2c3e50; }
+    * { box-sizing: border-box; }
     body {
-      font-family: Crimson Text, serif;   /* changes the font */
-      text-align: center;               /* centers all text */
-      margin-top: 100px;                /* pushes content down a bit */
+      margin: 0;
+      font-family: 'Crimson Text', serif;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      padding: 60px 16px 40px;
     }
-
+    /* Keep a centered content column */
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+    }
     h1 {
-      font-size: 2.5em;                 /* make the heading larger */
-      color: #2c3e50;                   /* change heading color */
+      font-size: 2.4rem;
+      color: var(--heading);
+      margin: 0 0 1rem;
     }
 
-    p {
-    font-family: 'Merriweather', serif;  /* choose font */
-    font-size: 1.1em;                    /* adjust size */
-    line-height: 1.6;                    /* space between lines */
-    max-width: 600px;                    /* limit width so it’s easy to read */
-    margin: 0 auto;                      /* center paragraph block */
-    text-align: left;                    /* keep text left-aligned */
-  }
-    
-      /* NEW STYLES for background box */
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 2rem;
-    max-width: 700px;
-    margin: 2rem auto;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  }
+    /* Reusable card style */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      text-align: left;                 /* paragraphs read better left-aligned */
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+    /* Body text inside cards */
+    .card p {
+      font-family: 'Merriweather', serif;
+      line-height: 1.6;
+      font-size: 1.05rem;
+      margin: 0;
+    }
+    /* If a card contains a heading, use the page heading font */
+    .card h1 {
+      margin: 0;
+      font-family: 'Crimson Text', serif;
+      font-size: 2rem;
+      color: var(--heading);
+      text-align: left;
+    }
   </style>
 </head>
 <body>
-  <h1>Welcome to the Proper Consumer Map!</h1>
-<p>
-  Proper is a transparency-first marketplace for everyday essentials.
-  Each product links to a supply chain map or list of known information
-  about each product, so you can see where your clothing and hygiene items
-  truly come from and what they are made of. Visibility is the standard.
-</p>
-<p>
-  Here you will find my research on household items that are the most
-  transparently sourced or sustainable. My goal is to map the supply chains
-  of every item that I use, starting with clothing and hygiene products.
-</p>
+  <div class="wrap">
+    <div class="card">
+      <h1>Welcome to the Proper Consumer Map!</h1>
+    </div>
 
-<p>
-  For items that I cannot acquire the information to create a comprehensive
-  map of the supply chain, I will research the public aspects of that product
-  to determine the "best" item in each category, ranked on sustainability,
-  health, and other factors that I am curating.
-</p>
+    <div class="card">
+      <p>
+        Proper is a transparency-first marketplace for everyday essentials.
+        Each product links to a supply chain map or list of known information
+        about each product, so you can see where your clothing and hygiene items
+        truly come from and what they are made of. Visibility is the standard.
+      </p>
+    </div>
+
+    <div class="card">
+      <p>
+        Here you will find my research on household items that are the most
+        transparently sourced or sustainable. My goal is to map the supply chains
+        of every item that I use, starting with clothing and hygiene products.
+      </p>
+    </div>
+
+    <div class="card">
+      <p>
+        For items that I cannot acquire the information to create a comprehensive
+        map of the supply chain, I will research the public aspects of that product
+        to determine the “best” item in each category, ranked on sustainability,
+        health, and other factors that I am curating.
+      </p>
+    </div>
+  </div>
 </body>
 </html>
