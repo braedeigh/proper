@@ -262,24 +262,32 @@ However, I will also be providing best alternatives in cases where this is impos
       stageLayers[stage] = L.layerGroup();
     });
 
-    // Add markers
-    const latlngsInOrder = [];
-    nodes.forEach((n, idx) => {
-      if (typeof n.lat !== 'number' || typeof n.lng !== 'number') return;
+// Add markers (robust to string lat/lng)
+const latlngsInOrder = [];
+nodes.forEach((n, idx) => {
+  const lat = Number(n.lat);
+  const lng = Number(n.lng);
 
-      const color = stageColors[n.stage] || '#111827';
-      // Simple circle marker so we don’t rely on external icon assets
-      const marker = L.circleMarker([n.lat, n.lng], {
-        radius: 7,
-        color: color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.85
-      }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    console.warn(`Skipping node ${idx+1} (${n.name||n.stage||"?"}) due to invalid lat/lng:`, n.lat, n.lng);
+    return;
+  }
 
-      (stageLayers[n.stage] || map).addLayer(marker);
-      latlngsInOrder.push([n.lat, n.lng]);
-    });
+  const color = stageColors[n.stage] || '#111827';
+  const marker = L.circleMarker([lat, lng], {
+    radius: 7,
+    color: color,
+    weight: 2,
+    fillColor: color,
+    fillOpacity: 0.85
+  }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
+
+  (stageLayers[n.stage] || map).addLayer(marker);
+  latlngsInOrder.push([lat, lng]);
+});
+
+console.log(`Loaded ${latlngsInOrder.length} supply-chain points.`);
+
 
     // Add stage layers to map & layer control
     const overlays = {};
