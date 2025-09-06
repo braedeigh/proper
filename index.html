@@ -213,6 +213,7 @@ However, I will also be providing best alternatives in cases where this is impos
 
   <!-- NEW: Map logic -->
   <script>
+  document.addEventListener('DOMContentLoaded', () => {
     // Stage colors (match legend)
     const stageColors = {
       "Farm": "#ef4444",
@@ -233,7 +234,7 @@ However, I will also be providing best alternatives in cases where this is impos
       return `
         <div style="font-family:'Merriweather',serif; max-width:260px">
           <div style="font-weight:700; font-size:1rem; margin-bottom:.25rem;">
-            ${idx+1}. ${n.stage}
+            ${idx+1}. ${n.stage||""}
           </div>
           <div style="font-weight:600">${n.name||""}</div>
           <div>${[n.city, n.region].filter(Boolean).join(", ")}</div>
@@ -244,52 +245,70 @@ However, I will also be providing best alternatives in cases where this is impos
       `;
     }
 
-    // Parse data
+    // Parse data safely
     const dataEl = document.getElementById('supplychain-data');
-    const chain = JSON.parse(dataEl.textContent);
-    const nodes = chain.nodes || [];
+    if (!dataEl) { console.error('❌ Missing #supplychain-data'); return; }
 
-    // Initialize map
+    let chain, nodes;
+    try {
+      chain = JSON.parse(dataEl.textContent || dataEl.innerText || 'null');
+      nodes = Array.isArray(chain?.nodes) ? chain.nodes : [];
+    } catch (e) {
+      console.error('❌ JSON parse error in #supplychain-data:', e);
+      return;
+    }
+
+    console.log('✅ Parsed supply chain data:', chain);
+    console.log('✅ nodes length:', nodes.length, nodes);
+
+    // Ensure Leaflet is available
+    if (typeof L === 'undefined') {
+      console.error('❌ Leaflet not loaded before map logic.');
+      return;
+    }
+
+    // Build map
+    const mapEl = document.getElementById('map');
+    if (!mapEl) { console.error('❌ Missing #map'); return; }
+
     const map = L.map('map', { scrollWheelZoom: true });
-    const base = L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { attribution: '&copy; OpenStreetMap contributors' }
-    ).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-    // Create a layer group per stage for toggling
+    // Stage layers
     const stageLayers = {};
     Object.keys(stageColors).forEach(stage => {
       stageLayers[stage] = L.layerGroup();
     });
 
-// Add markers (robust to string lat/lng)
-const latlngsInOrder = [];
-nodes.forEach((n, idx) => {
-  const lat = Number(n.lat);
-  const lng = Number(n.lng);
+    // Add markers (robust to string lat/lng)
+    const latlngsInOrder = [];
+    nodes.forEach((n, idx) => {
+      const lat = Number(n.lat);
+      const lng = Number(n.lng);
 
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    console.warn(`Skipping node ${idx+1} (${n.name||n.stage||"?"}) due to invalid lat/lng:`, n.lat, n.lng);
-    return;
-  }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        console.warn(`⏭️ Skipping node ${idx+1} (${n.name||n.stage||"?"}) invalid lat/lng:`, n.lat, n.lng);
+        return;
+      }
 
-  const color = stageColors[n.stage] || '#111827';
-  const marker = L.circleMarker([lat, lng], {
-    radius: 7,
-    color: color,
-    weight: 2,
-    fillColor: color,
-    fillOpacity: 0.85
-  }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
+      const color = stageColors[n.stage] || '#111827';
+      const marker = L.circleMarker([lat, lng], {
+        radius: 7,
+        color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.85
+      }).bindPopup(nodePopup(n, idx), { maxWidth: 280 });
 
-  (stageLayers[n.stage] || map).addLayer(marker);
-  latlngsInOrder.push([lat, lng]);
-});
+      (stageLayers[n.stage] || map).addLayer(marker);
+      latlngsInOrder.push([lat, lng]);
+    });
 
-console.log(`Loaded ${latlngsInOrder.length} supply-chain points.`);
+    console.log(`📍 Rendered ${latlngsInOrder.length} markers.`);
 
-
-    // Add stage layers to map & layer control
+    // Overlays & fit
     const overlays = {};
     Object.entries(stageLayers).forEach(([stage, layer]) => {
       if (layer.getLayers().length) {
@@ -299,17 +318,17 @@ console.log(`Loaded ${latlngsInOrder.length} supply-chain points.`);
     });
     L.control.layers(null, overlays, { collapsed: false }).addTo(map);
 
-    // Draw production path (order = array order)
     if (latlngsInOrder.length >= 2) {
-      L.polyline(latlngsInOrder, { color: '#0ea5e9', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(L.latLngBounds(latlngsInOrder), { padding: [20, 20] });
+      L.polyline(latlngsInOrder, { color: '#0ea5e9', weight: 3, opacity: 0.9 }).addTo(map);
     } else if (latlngsInOrder.length === 1) {
       map.setView(latlngsInOrder[0], 7);
     } else {
-      map.setView([20,0], 2);
+      console.warn('⚠️ No valid coordinates found. Centering world.');
+      map.setView([20, 0], 2);
     }
 
-    // Smooth scroll if user clicks "View Supply Chain →"
+    // Smooth scroll for "View Supply Chain →"
     document.querySelectorAll('a[href="#map"]').forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
@@ -317,6 +336,10 @@ console.log(`Loaded ${latlngsInOrder.length} supply-chain points.`);
         setTimeout(() => map.invalidateSize(), 300);
       });
     });
+
+    // Debug helper
+    window._proper = { chain, nodes, latlngsInOrder };
+  });
   </script>
 </body>
 </html>
